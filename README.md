@@ -71,18 +71,20 @@ Not bad, but too simplistic to be useful. Take the example from Chris's blog pos
 
 That tree could be defined as follows:
 
-    auto tree = Builder<ZombieState>{}
-        .sequence()
-            .leaf([](ZombieState &zombie) -> Status {
-                return zombie.is_hungry ? Status::SUCCESS : Status::FAILURE;
-            })
-            .leaf(&ZombieState::has_food)
-            .inverter()
-                .leaf(EnemiesAroundChecker{})
-            .end()
-            .void_leaf(&ZombieState::eat_food)
+```cpp
+auto tree = Builder<ZombieState>{}
+    .sequence()
+        .leaf([](ZombieState &zombie) -> Status {
+            return zombie.is_hungry ? Status::SUCCESS : Status::FAILURE;
+        })
+        .leaf(&ZombieState::has_food)
+        .inverter()
+            .leaf(EnemiesAroundChecker{})
         .end()
-        .build();
+        .void_leaf(&ZombieState::eat_food)
+    .end()
+    .build();
+```
 
 This builder pattern is inspired by arvidsson's [BrainTree](https://github.com/arvidsson/BrainTree).
 
@@ -102,7 +104,9 @@ The tree's root node is essentially a decorator that just returns the result of 
 
 The above example uses many of the primitives available of Beehive. Note that the convenience functions `.sequence()` and `.inverter()` were used: these are shorthands for `.composite(&beehive::sequence<ZombieState>)` and `.decorator(&beehive::inverter<ZombieState>)`, respectively. You can pass any callable -- including lambdas, free functions, functors, static member functions and context object member functions -- to `.composite()` that matches this callable signature:
 
-    beehive::Status operator()(Context &context, beehive::Generator<Context> next_child, beehive::TreeState &tree_state);
+```cpp
+beehive::Status operator()(Context &context, beehive::Generator<Context> next_child, beehive::TreeState &tree_state);
+```
 
 This function is the process function called when the Tree is on this node. In this function, iterate through the child nodes by calling the `next_child()` generator.
 
@@ -128,7 +132,9 @@ Status sequence(
 
 Similarly, you can pass any callable of the following signature to `.decorator()`:
 
-    beehive::Status operator()(Context &context, beehive::Node const &child, beehive::TreeState &state);
+```cpp
+beehive::Status operator()(Context &context, beehive::Node const &child, beehive::TreeState &state);
+```
 
 For example, here's an implementation of the `inverter` decorator:
 
@@ -150,7 +156,9 @@ You may not need to implement your own composites and decorators. If you come up
 
 Defining a leaf node is a matter of providing the process function. This is the function that the tree will run when it reaches that node. The functions can take many forms, but they boil down to this signature:
 
-    beehive::Status operator()(Context &);
+```cpp
+beehive::Status operator()(Context &);
+```
 
 where Context is the template parameter passed in to the Builder in the first place.
 
@@ -166,10 +174,12 @@ In the above example, various approaches to adding the function are demonstrated
 - with a member function pointer: `.leaf(&ZombieState::has_food)` (given `bool ZombieState::has_food() const`). This works because the `ZombieState &` passed in as the first parameter becomes the `this` of the member function call.
 - with a functor: `.leaf(EnemiesAroundChecker{})` -- given
 
-        struct EnemiesAroundChecker {
-            beehive::Status operator()(ZombieState const &) const;
-            // maybe additional state/context members
-        }
+```cpp
+struct EnemiesAroundChecker {
+    beehive::Status operator()(ZombieState const &) const;
+    // maybe additional state/context members
+};
+```
 
 - with a void member function: `.void_leaf(&ZombieState::eat_food)`. The result of `ZombieState::eat_food()` is ignored.
 
@@ -179,13 +189,15 @@ Additionally, you could use a static member function pointer, a free function po
 
 Suppose you already have a tree built for the given Context type. You can reuse the builder code by using the builder's `.tree()` function to attach the entire tree as a child.
 
-    // given `tree` above
-    auto tree2 = Builder<ZombieState>{}
-        .sequence()
-            .tree(tree)
-            // ... etc.
-        .end()
-        .build();
+```cpp
+// given `tree` above
+auto tree2 = Builder<ZombieState>{}
+    .sequence()
+        .tree(tree)
+        // ... etc.
+    .end()
+    .build();
+```
 
 ## Using the tree
 
@@ -197,18 +209,20 @@ Whenever you call `process()` on a tree, you pass in the Context object by refer
 
 The above example used a `ZombieState` context similar to this:
 
-    struct ZombieState // An app-specific context object
+```cpp
+struct ZombieState // An app-specific context object
+{
+    bool is_hungry{true};
+    void eat_food();
+
+    beehive::Status has_food() const
     {
-        bool is_hungry{true};
-        void eat_food();
+        return _has_food? beehive::Status::SUCCESS : beehive::Status::FAILURE;
+    }
 
-        beehive::Status has_food() const
-        {
-            return _has_food? beehive::Status::SUCCESS : beehive::Status::FAILURE;
-        }
-
-        bool _has_food{true};
-    };
+    bool _has_food{true};
+};
+```
 
 ### The tree state
 
@@ -232,9 +246,14 @@ The `TreeState` passed to `tree.process()` **must** have originated from a call 
 
 Once the tree is built, you can run `process()` on it with a Context instance. When and how you decide to recreate the instance is up to you.
 
-    auto tree_state = tree.make_state(); // get tree state
-    ZombieState zombie_state = make_state(); // initialized state
-    tree.process(tree_state, zombie_state);
+```cpp
+// once per entity using the tree
+auto tree_state = tree.make_state(); // get tree state
+ZombieState zombie_state = make_state(); // initialized state
+
+// later, every frame ...
+tree.process(tree_state, zombie_state);
+```
 
 ### Interrupting a running task
 
