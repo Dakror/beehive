@@ -35,6 +35,15 @@ mkdir build && cd build
 cmake .. -G Xcode -DBEEHIVE_BuildTests=ON
 ```
 
+## Generate documentation
+
+This README should contain everything you need to get started. For generated documentation, use the Doxyfile in docs/:
+
+```
+cd doc && doxygen
+open html/index.html
+```
+
 # Get started!
 
 If you have not read Chris Simpson's [blog post on the subject](https://www.gamasutra.com/blogs/ChrisSimpson/20140717/221339/), you should do so now. The terminology used in Beehive closely matches that defined or used by Chris Simpson.
