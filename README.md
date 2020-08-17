@@ -108,7 +108,7 @@ The above example uses many of the primitives available of Beehive. Note that th
 beehive::Status operator()(Context &context, beehive::Generator<Context> next_child, beehive::TreeState &tree_state);
 ```
 
-This function is the process function called when the Tree is on this node. In this function, iterate through the child nodes by calling the `next_child()` generator.
+This function is the process function called when the Tree is on this node. In this function, iterate through the child nodes by calling the `next_child()` generator. The generator returns `beehive::Node<Context> const *` or nullptr at the end of the child list.
 
 For example, here's an implementation of the `sequence` composite:
 

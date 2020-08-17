@@ -26,16 +26,29 @@ enum class Status
     SUCCESS //!< Returns when the process has succeeded.
 };
 
+/*!
+ \brief Pass a TreeState instance to #beehive::Tree's process function in order to resume Running nodes. Instantiate with #beehive::Tree::make_state. 
+*/
 struct TreeState {
-    size_t resume_index{};
-    size_t offset{};
+    // For internal use only.
+    size_t resume_index() const {
+        return _resume_index;
+    }
+    // For internal use only.
+    size_t offset() const {
+        return _offset;
+    }
 private:
     TreeState(size_t tree_id): _tree_id(tree_id) {}
     
-    size_t _tree_id; 
+    size_t _tree_id;
+    size_t _resume_index{};
+    size_t _offset{};
 
     template<typename C, typename A>
     friend class Tree;
+    template<typename C>
+    friend struct Node;
 };
 
 /*!
@@ -57,14 +70,17 @@ struct Node
         return _child_count;
     }
     
-    size_t descendent_count() const {
-        auto count = _child_count;
-        auto *child = first_child();
-        for (size_t i = 0; i < _child_count; ++i) {
-            count += child->descendent_count();
-            child = child->next_sibling();
+    size_t descendant_count() const {
+        // Only calculate on the first call
+        if (_descendant_count == 0 && _child_count > 0) {
+            _descendant_count = _child_count;
+            auto *child = first_child();
+            for (size_t i = 0; i < _child_count; ++i) {
+                _descendant_count += child->descendant_count();
+                child = child->next_sibling();
+            }
         }
-        return count;
+        return _descendant_count;
     }
     
     void add_child() {
@@ -75,15 +91,38 @@ struct Node
         if (_child_count == 0) {
             return nullptr;
         }
+        // Tree nodes are stored contiguously in depth-first order.
+        // Therefore, first child is always current pointer plus 1.
         return this + 1;
     }
     
     Node const *next_sibling() const {
-        return this + descendent_count() + 1;
+        // Tree nodes are stored contiguously in depth-first order.
+        return this + descendant_count() + 1;
     }
-    
+
+    /*!
+        \brief Returns this node's index in its tree. 
+    */
     size_t index() const {
         return _index;
+    }
+    
+    /*!
+        \brief Updates the given tree state so that the tree can resume at this (composite) node with the child generator starting at the given child index. 
+    */
+    void save_state_at_child_index(TreeState &state, size_t child_index) const {
+        state._resume_index = index();
+        assert(child_index < child_count());
+        state._offset = child_index;
+    }
+
+    /*!
+        \brief Clears the given tree state so that subsequent process() calls do not resume. 
+    */
+    void clear_state(TreeState &state) const {
+        state._resume_index = 0;
+        state._offset = 0;
     }
 
 private:
@@ -92,6 +131,7 @@ private:
     
     size_t _index{};
     size_t _child_count{};
+    mutable size_t _descendant_count{};
     ProcessFunction _process;
 };
 
@@ -284,7 +324,7 @@ template<typename C, typename A>
 Status Tree<C, A>::process(TreeState &state, Context &context) const
 {
     assert(state._tree_id == _id); // another tree's state used with this tree 
-    return _nodes.at(state.resume_index).process(context, state);
+    return _nodes.at(state.resume_index()).process(context, state);
 }
 
 /// @cond
@@ -503,8 +543,8 @@ auto make_branch(Composite<C> f) -> typename Node<C>::ProcessFunction
     {
         auto i = 0;
         auto *child = self.first_child();
-        if (self.index() == state.resume_index) {
-            for (; i < state.offset; ++i) {
+        if (self.index() == state.resume_index()) {
+            for (; i < state.offset(); ++i) {
                 child = child->next_sibling();
             }
         }
@@ -518,11 +558,9 @@ auto make_branch(Composite<C> f) -> typename Node<C>::ProcessFunction
         };
         auto status = process(context, generator, state);
         if (status == Status::RUNNING) {
-            state.resume_index = self.index();
-            state.offset = i - 1;
+            self.save_state_at_child_index(state, i - 1);
         } else {
-            state.resume_index = 0;
-            state.offset = 0;
+            self.clear_state(state);
         }
         return status;
     };

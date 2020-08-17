@@ -63,16 +63,16 @@ TEST(BeehiveTest, NodeChildTest)
     EXPECT_EQ(v[2].next_sibling(), &v[3]);
     EXPECT_EQ(v[5].next_sibling(), &v[9]);
     
-    EXPECT_EQ(9, v[0].descendent_count());
-    EXPECT_EQ(2, v[1].descendent_count());
-    EXPECT_EQ(0, v[2].descendent_count());
-    EXPECT_EQ(0, v[3].descendent_count());
-    EXPECT_EQ(0, v[4].descendent_count());
-    EXPECT_EQ(3, v[5].descendent_count());
-    EXPECT_EQ(1, v[6].descendent_count());
-    EXPECT_EQ(0, v[7].descendent_count());
-    EXPECT_EQ(0, v[8].descendent_count());
-    EXPECT_EQ(0, v[9].descendent_count());
+    EXPECT_EQ(9, v[0].descendant_count());
+    EXPECT_EQ(2, v[1].descendant_count());
+    EXPECT_EQ(0, v[2].descendant_count());
+    EXPECT_EQ(0, v[3].descendant_count());
+    EXPECT_EQ(0, v[4].descendant_count());
+    EXPECT_EQ(3, v[5].descendant_count());
+    EXPECT_EQ(1, v[6].descendant_count());
+    EXPECT_EQ(0, v[7].descendant_count());
+    EXPECT_EQ(0, v[8].descendant_count());
+    EXPECT_EQ(0, v[9].descendant_count());
 }
 
 TEST(BeehiveTest, TreeNodesTest)
@@ -104,7 +104,7 @@ TEST(BeehiveTest, TreeNodesTest)
     EXPECT_EQ(nodes[3].child_count(), 0);
     EXPECT_EQ(nodes[2].next_sibling(), &nodes[5]);
     EXPECT_EQ(nodes[3].next_sibling(), &nodes[4]);
-    EXPECT_EQ(nodes[1].descendent_count(), 7);
+    EXPECT_EQ(nodes[1].descendant_count(), 7);
 }
 
 TEST(BeehiveTest, ExampleTest)
@@ -152,12 +152,12 @@ TEST(BeehiveTest, ResumeRunningTest)
         .build();
 
     auto state = tree.make_state();
-    EXPECT_EQ(state.resume_index, 0);
+    EXPECT_EQ(state.resume_index(), 0);
     VisitCountArray visited{};
     auto status = tree.process(state, visited);
     EXPECT_EQ(status, Status::RUNNING);
-    EXPECT_EQ(state.resume_index, 1);
-    EXPECT_EQ(state.offset, 1);
+    EXPECT_EQ(state.resume_index(), 1);
+    EXPECT_EQ(state.offset(), 1);
     EXPECT_EQ(visited[0], 1);
     EXPECT_EQ(visited[1], 1);
     EXPECT_EQ(visited[2], 0);
