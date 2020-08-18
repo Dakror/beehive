@@ -248,11 +248,6 @@ Status noop(C &)
     return Status::SUCCESS;
 }
 
-size_t id() {
-    static size_t id{};
-    return ++id;
-}
-
 /*!
  \brief The behavior tree class which passes the ContextType around. See #beehive::Builder for making one.
 */
@@ -287,6 +282,11 @@ public:
     }
 
 private:
+    static size_t id() {
+        static size_t id{};
+        return ++id;
+    }
+
     template<typename C, typename Allocator>
     friend class BuilderBase;
 
